@@ -20,7 +20,16 @@ async function consumeAPI(signal) {
 function appendToHTML(element) {
   return new WritableStream({
     write({ title, description, url_anime }) {
-      element.innerHTML += title + "<br>"
+      const card = `
+      <article>
+        <div class="text">
+          <h3>${title}</h3>
+          <p>${description}</p>
+          <a href="${url_anime}">Here's why</a>
+        </div>
+      </article>
+      `
+      element.innerHTML += card
     }
   })
 }
