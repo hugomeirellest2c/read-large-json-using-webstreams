@@ -7,33 +7,48 @@ async function consumeAPI(signal) {
   let counter = 0
   const reader = res.body
     .pipeThrough(new TextDecoderStream())
-    // .pipeThrough(parseNDJSON())
-    .pipeTo(new WritableStream({
-      write(chunk) {
-        console.log(++counter, 'chunk', chunk)
-      }
-    }))
+    .pipeThrough(parseNDJSON())
+    // .pipeTo(new WritableStream({
+    //   write(chunk) {
+    //     console.log(++counter, 'chunk', chunk)
+    //   }
+    // }))
 
   return reader
 }
 
-// function parseNDJSON() {
-//   let ndjsonBuffer = ''
-//   return new TransformStream({
-//     transform(chunk, controller) {
-//       ndjsonBuffer += chunk
-//       const items = ndjsonBuffer.split('\n')
-//       items.slice(0, -1)
-//         .forEach(item => controller.enqueue(JSON.parse(item)))
+function appendToHTML(element) {
+  return new WritableStream({
+    write({ title, description, url_anime }) {
+      element.innerHTML += title + "<br>"
+    }
+  })
+}
 
-//       ndjsonBuffer = items[items.length - 1]
-//     },
-//     flush(controller) {
-//       if(!ndjsonBuffer) return
-//       controller.enqueue(JSON.parse(ndjsonBuffer))
-//     }
-//   })
-// }
+function parseNDJSON() {
+  let ndjsonBuffer = ''
+  return new TransformStream({
+    transform(chunk, controller) {
+      ndjsonBuffer += chunk
+      const items = ndjsonBuffer.split('\n')
+      items.slice(0, -1)
+        .forEach(item => controller.enqueue(JSON.parse(item)))
+
+      ndjsonBuffer = items[items.length - 1]
+    },
+    flush(controller) {
+      if(!ndjsonBuffer) return;
+      controller.enqueue(JSON.parse(ndjsonBuffer))
+    }
+  })
+}
+
+const [
+  start,
+  stop,
+  cards
+] = ['start', 'stop', 'cards'].map(item => document.getElementById(item))
 
 const abortController = new AbortController()
-await consumeAPI(abortController.signal)
+const readable = await consumeAPI(abortController.signal)
+readable.pipeTo(appendToHTML(cards))
